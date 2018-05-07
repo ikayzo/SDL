@@ -108,7 +108,7 @@ grandparent2 name="Harold" age=93 {
 	}
 }
 
--- Test tags with no names (content tags) --
+# Test tags with no names (content tags)
 
 "hello"
 
@@ -125,6 +125,24 @@ matrix {
 	1	2	3
 	4	5	6
 }
+
+# Test semicolons
+
+twoLines {
+	"line1";"line2"
+}
+
+threeLines {
+	"line1";"line2"; "line3"
+}
+
+// six tags on two lines with semicolons everywhere
+sixLines {
+	"line1";"line2"; "line3"
+	;;1;2;;;  3;;
+}
+
+"name"; textbox "Joe"
 
 -----------------------------------------
 -- tests with namespaces, comments, etc.
