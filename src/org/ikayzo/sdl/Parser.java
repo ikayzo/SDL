@@ -36,7 +36,7 @@ class Parser {
 	private List<Token> toks;
 	private StringBuilder sb;
 	private boolean startEscapedQuoteLine;
-	private int lineNumber=-1, pos=0, lineLength=0, tokenStart=0;
+	private int lineNumber=-1, lineStart = 0, pos=0, lineLength=0, tokenStart=0;
 	
 	/**
 	 * Create an SDL parser
@@ -358,6 +358,8 @@ class Parser {
 		}
 	}
 
+	private boolean semicolonTerminated = false;
+	
 	/**
 	 * Get a line as tokens.  This method handles line continuations both
 	 * within and outside String literals.
@@ -366,8 +368,14 @@ class Parser {
 	 * @throws SDLParseException
 	 * @throws IOException
 	 */
-	List<Token> getLineTokens() throws SDLParseException, IOException {
-		line = readLine();
+	List<Token> getLineTokens() throws SDLParseException, IOException {		
+		
+		if(semicolonTerminated) {
+			semicolonTerminated = false;
+		} else {
+			line = readLine();
+		}
+		
 		if(line==null)
 			return null;
 		toks = new ArrayList<Token>();
@@ -378,10 +386,7 @@ class Parser {
 		for(;pos<lineLength; pos++) {
 			char c=line.charAt(pos);
 
-			if(sb!=null) {
-				toks.add(new Token(sb.toString(), lineNumber, tokenStart));
-				sb=null;
-			}
+			completeToken();
 			
 			if(c=='"') {	
 				// handle "" style strings including line continuations
@@ -424,6 +429,8 @@ class Parser {
 				// can only occur at the end of a line
 				handleLineContinuation();
 			} else if("0123456789-.".indexOf(c)!=-1) {
+				
+				// handle -- style comment
 				if(c=='-' && (pos+1)<lineLength &&
 						line.charAt(pos+1)=='-')
 					break;
@@ -433,23 +440,39 @@ class Parser {
 			} else if(Character.isJavaIdentifierStart(c)) {
 				// handle identifiers
 				handleIdentifier();
+			} else if(c==';') {
+				if(toks.size()==0) {
+					continue;
+				} else {
+					semicolonTerminated=true;
+				}
+				
+				pos++;
+				break;
 			} else {
 				parseException("Unexpected character \"" + c + "\".)",
 						lineNumber, pos);
 			}
 		}
 		
-		if(sb!=null) {
-			toks.add(new Token(sb.toString(), lineNumber, tokenStart));
-		}
+		completeToken();
 		
 		// if toks are empty, try another line
 		// this seems a bit dangerous, but eventually we should get a null line
 		// which serves as a termination condition for the recursion
 		while(toks!=null && toks.isEmpty())
 			toks=getLineTokens();
-		
+
 		return toks;
+	}
+	
+	private void completeToken() throws SDLParseException {
+		if(sb!=null) {
+			String tokenString = sb.toString();
+			// if(tokenString.length()!=0) // this isn't needed
+			toks.add(new Token(tokenString, lineNumber, tokenStart));
+			sb=null;
+		}
 	}
 	
 	private void addEscapedCharInString(char c)
@@ -839,7 +862,7 @@ class Parser {
 	}	
 	
 	/**
-	 * Skips comment lines and blank lines.
+	 * Skips comment lines and blank lines, increments line count.
 	 * 
 	 * @return the next line or null at the end of the file.
 	 */
@@ -880,17 +903,7 @@ class Parser {
 		
 		return line;
 	}	
-	
-	enum Type {
-		IDENTIFIER,
-		
-		// punctuation
-		COLON, EQUALS, START_BLOCK, END_BLOCK,
-		
-		// literals
-		STRING, CHARACTER, BOOLEAN, NUMBER, DATE, TIME, BINARY, NULL
-	}
-	
+
 	/**
 	 * Combine a date only calendar with a TimeSpanWithZone to create a 
 	 * date-time calendar 
@@ -927,6 +940,16 @@ class Parser {
 			cc.setTimeZone(tz);
 		
 		return cc;		
+	}	
+	
+	enum Type {
+		IDENTIFIER,
+		
+		// punctuation
+		COLON, EQUALS, START_BLOCK, END_BLOCK,
+		
+		// literals
+		STRING, CHARACTER, BOOLEAN, NUMBER, DATE, TIME, BINARY, NULL
 	}	
 	
 	/**
