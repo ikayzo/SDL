@@ -68,6 +68,7 @@ public class Test {
 	private static final String ATTRIBUTES = "Attributes";	
 	private static final String VALUES_AND_ATTRIBUTES = "Values and Attributes";		
 	private static final String CHILDREN = "Children";	
+	private static final String SEMICOLONS = "Semicolons";	
 	private static final String NAMESPACES = "Namespaces";	
 	
 	////////////////////////////////////////////////////////////////////////////
@@ -472,7 +473,24 @@ public class Test {
 		Tag matrix = root.getChild("matrix");
 		
 		assertEquals(CHILDREN, matrix.getChildrenValues("content"),
-				list(list(1,2,3),list(4,5,6)));		
+				list(list(1,2,3),list(4,5,6)));
+		
+	}
+	
+	public static void testSemicolons(Tag root) {	
+		out.println("Doing semicolon tests...");		
+		Tag twoLines = root.getChild("twoLines");		
+		assertEquals(SEMICOLONS, twoLines.getChildrenValues("content"),
+				list("line1", "line2"));		
+		
+		Tag threeLines = root.getChild("threeLines");	
+		assertEquals(SEMICOLONS, threeLines.getChildrenValues("content"),
+				list("line1", "line2", "line3"));			
+		
+		Tag sixLines = root.getChild("sixLines");	
+		assertEquals(SEMICOLONS, sixLines.getChildrenValues("content"),
+				list("line1", "line2", "line3", 1, 2, 3));	
+		
 	}
 	
 	public static void testNamespaces(Tag root) {
@@ -615,6 +633,10 @@ public class Test {
 		try { testChildren(root); } catch(Throwable e) {
 			reportException(CHILDREN, e);
 		}	
+
+		try { testSemicolons(root); } catch(Throwable e) {
+			reportException(SEMICOLONS, e);
+		}		
 		
 		try { testNamespaces(root); } catch(Throwable e) {
 			reportException(NAMESPACES, e);
